@@ -65,5 +65,11 @@ Temperaturer = [Temperatur1_1, Temperatur1_2, Temperatur2_1 ,Temperatur2_2, Temp
 print(Temperatur2_2.get_frequency())
 
 fig, axs = plt.subplots(3, 1, figsize=(20, 10))
-
+counter=0
+for i in range(3):
+    axs[i].grid()
+    axs[i].scatter(Temperaturer[counter].t(), Temperaturer[counter].a(), color='black', s=2)
+    counter+=1
+    axs[i].scatter(Temperaturer[counter].t(), Temperaturer[counter].a(), color='red', s=2)
+    counter+=1
 plt.show()
