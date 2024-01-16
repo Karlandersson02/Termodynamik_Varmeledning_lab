@@ -20,7 +20,8 @@ Temperatur3_2_file = r'./Mätningar/Ångström_3/Temperatur2.csv'
 
 class Data:
 
-    def __init__(self, data, Mätintervall):
+    def __init__(self, data, Mätintervall, start=0):
+        self.useful_data_start = start
         self.datadict = {}
         self.datadict['Time'] = []
         self.datadict['Amplitude'] = []
@@ -31,27 +32,38 @@ class Data:
                     self.datadict['Time'].append(int(r[0])*Mätintervall)
                     self.datadict['Amplitude'].append(float('.'.join(r[1][:-1].split(','))))
         return
+    
     def t(self):
-        return self.datadict['Time']
+        return self.datadict['Time'][self.useful_data_start:]
     
     def a(self):
-        return self.datadict['Amplitude']
+        return self.datadict['Amplitude'][self.useful_data_start:]
+    
+    def get_frequency(self):
+        x, y = np.array(self.t()), np.array(self.a())
+        Freq_Amplitudes = np.abs(np.fft.fft(y))
+        Freq = np.fft.fftfreq(len(x), x[1]-x[0])
+        FFT = {}
+        for i in range(len(Freq)):
+            FFT[np.abs(Freq_Amplitudes[i])] = Freq[i]
+        sorted_list = sorted(FFT.items(), key = lambda x:-x[0])
+        # return abs(FFT[sorted_list[-2][0]])
+        for i in range(100):
+            if sorted_list[i][1] > 0.0015:
+                relevant_frequency = sorted_list[i][1]
+                break
+        return relevant_frequency
 
-Temperatur1_1 = Data(Temperatur1_1_file, 5)
-Temperatur1_2 = Data(Temperatur1_2_file, 5)
-Temperatur2_1 = Data(Temperatur2_1_file, 2)
-Temperatur2_2 = Data(Temperatur2_2_file, 2)
-Temperatur3_1 = Data(Temperatur2_1_file, 2)
-Temperatur3_2 = Data(Temperatur2_2_file, 2)
+Temperatur1_1 = Data(Temperatur1_1_file, 5, 6000)
+Temperatur1_2 = Data(Temperatur1_2_file, 5, 6000)
+Temperatur2_1 = Data(Temperatur2_1_file, 2, 3750)
+Temperatur2_2 = Data(Temperatur2_2_file, 2, 3750)
+Temperatur3_1 = Data(Temperatur2_1_file, 2, 4000)
+Temperatur3_2 = Data(Temperatur2_2_file, 2, 4000)
+Temperaturer = [Temperatur1_1, Temperatur1_2, Temperatur2_1 ,Temperatur2_2, Temperatur3_1, Temperatur3_2]
 
-def Oscillation_Frequency(x, y):
-    x, y = np.array(x), np.array(y)
-    Freq_Amplitudes = np.abs(np.fft.fft(y))
-    Freq = np.fft.fftfreq(len(x), x[1]-x[0])
-    FFT = {}
-    for i in range(len(Freq)):
-        FFT[np.abs(Freq_Amplitudes[i])] = Freq[i]
-    sorted_list = sorted(FFT.items(), key = lambda x:x[0])
-    return Freq, Freq_Amplitudes, FFT[sorted_list[-2][0]]
+print(Temperatur2_2.get_frequency())
 
-Freq, Freq_Amplitudes, Frequency = Oscillation_Frequency(Temperatur1_1.df['Time'][2500:], Temperatur1_1.df['Y'][2500:])
+fig, axs = plt.subplots(3, 1, figsize=(20, 10))
+
+plt.show()
