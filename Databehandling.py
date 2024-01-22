@@ -98,3 +98,5 @@ Measurement3 = Measurement(Temperatur3_1_file, Temperatur3_2_file, 2, 4000)
 fig, axs = plt.subplots(3, 1, figsize=(20, 10))
 counter=0
 colors = 200*['red', 'green', 'yellow']
+print(Measurement1.get_mean())
+
