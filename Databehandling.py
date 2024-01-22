@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import csv
+from scipy.signal import find_peaks
 
 #-----------------Mätning1------------------------------------
 Spänning1_1_file = r'./Mätningar/Ångström_1/Spänning1.csv'
@@ -20,24 +20,27 @@ Temperatur3_2_file = r'./Mätningar/Ångström_3/Temperatur2.csv'
 
 class Data:
 
-    def __init__(self, data, Mätintervall, start=0):
-        self.useful_data_start = start
+    def __init__(self, data, mätintervall, start=0, end=-1):
+        self.data_start = start//mätintervall
+        self.data_end = end//mätintervall
         self.datadict = {}
         self.datadict['Time'] = []
         self.datadict['Amplitude'] = []
+        self.mätintervall = mätintervall
+        self.peaks = []
         with open(data, 'r', encoding='utf-8') as file:
             for row in file:
                 if row[0].isnumeric():
                     r = row.split(';')
-                    self.datadict['Time'].append(int(r[0])*Mätintervall)
+                    self.datadict['Time'].append(int(r[0])*self.mätintervall)
                     self.datadict['Amplitude'].append(float('.'.join(r[1][:-1].split(','))))
         return
     
     def t(self):
-        return self.datadict['Time'][self.useful_data_start:]
+        return self.datadict['Time'][self.data_start:self.data_end]
     
     def a(self):
-        return self.datadict['Amplitude'][self.useful_data_start:]
+        return self.datadict['Amplitude'][self.data_start:self.data_end]
     
     def get_frequency(self):
         x, y = np.array(self.t()), np.array(self.a())
@@ -53,23 +56,45 @@ class Data:
                 relevant_frequency = sorted_list[i][1]
                 break
         return relevant_frequency
+    
+    def get_peaks(self):
+        if self.peaks != []:
+            return self.peaks
+        peakindice = find_peaks(self.a(), distance=int(0.6/self.get_frequency()/self.mätintervall))
+        for index in peakindice[0]:
+            self.peaks.append((self.t()[index] ,self.a()[index]))
+        return self.peaks
+
+class Measurement:
+
+    def __init__(self, data1, data2, Mätintervall, start=0, end=-1):
+        self.termoelement1 = Data(data1, Mätintervall, start, end)
+        self.termoelement2 = Data(data2, Mätintervall, start, end)
+        print(len(self.termoelement1.get_peaks()), len(self.termoelement2.get_peaks()))
+        self.length = 0.15
+        self.wave_info = {'Par_'+str(i): 
+                          {'t_ij': self.termoelement2.get_peaks()[i][0]-self.termoelement1.get_peaks()[i][0]}
+                            for i in range(len(self.termoelement2.get_peaks()))}
+
+    def get_mean(self):
+        times = [self.wave_info[par]['t_ij'] for par in self.wave_info]
+        return sum(times)/len(times)
 
 Temperatur1_1 = Data(Temperatur1_1_file, 5, 6000)
 Temperatur1_2 = Data(Temperatur1_2_file, 5, 6000)
 Temperatur2_1 = Data(Temperatur2_1_file, 2, 3750)
 Temperatur2_2 = Data(Temperatur2_2_file, 2, 3750)
-Temperatur3_1 = Data(Temperatur2_1_file, 2, 4000)
-Temperatur3_2 = Data(Temperatur2_2_file, 2, 4000)
+Temperatur3_1 = Data(Temperatur3_1_file, 2, 3000, 56000)
+Temperatur3_2 = Data(Temperatur3_2_file, 2, 3000, 56000)
 Temperaturer = [Temperatur1_1, Temperatur1_2, Temperatur2_1 ,Temperatur2_2, Temperatur3_1, Temperatur3_2]
 
-print(Temperatur2_2.get_frequency())
+Measurement1 = Measurement(Temperatur1_1_file, Temperatur1_2_file, 5, 6000)
+Measurement2 = Measurement(Temperatur2_1_file, Temperatur2_2_file, 2, 3750)
+Measurement3 = Measurement(Temperatur3_1_file, Temperatur3_2_file, 2, 4000)
+# print(Measurement1.get_mean())
+# print(Measurement2.get_mean())
+# print(Measurement3.get_mean())
 
 fig, axs = plt.subplots(3, 1, figsize=(20, 10))
 counter=0
-for i in range(3):
-    axs[i].grid()
-    axs[i].scatter(Temperaturer[counter].t(), Temperaturer[counter].a(), color='black', s=2)
-    counter+=1
-    axs[i].scatter(Temperaturer[counter].t(), Temperaturer[counter].a(), color='red', s=2)
-    counter+=1
-plt.show()
+colors = 200*['red', 'green', 'yellow']
