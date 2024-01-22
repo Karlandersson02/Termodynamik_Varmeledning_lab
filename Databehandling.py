@@ -34,6 +34,9 @@ class Data:
                     r = row.split(';')
                     self.datadict['Time'].append(int(r[0])*self.mätintervall)
                     self.datadict['Amplitude'].append(float('.'.join(r[1][:-1].split(','))))
+        
+        self.minindices = find_peaks(-np.array(self.a()), distance=int(0.9/self.get_frequency()/self.mätintervall))[0]
+        self.maxindices = find_peaks(self.a(), distance=int(0.9/self.get_frequency()/self.mätintervall))
         return
     
     def t(self):
@@ -57,28 +60,50 @@ class Data:
                 break
         return relevant_frequency
     
-    def get_peaks(self):
+    def get_max_peaks(self):
         if self.peaks != []:
             return self.peaks
-        peakindice = find_peaks(self.a(), distance=int(0.6/self.get_frequency()/self.mätintervall))
-        for index in peakindice[0]:
+        self.peaks = []
+        for index in self.maxindices:
             self.peaks.append((self.t()[index] ,self.a()[index]))
         return self.peaks
+    
+    def get_mini_peaks(self):
+        peaks = []
+        for index in self.minindices:
+            peaks.append((self.t()[index], self.a()[index]))
+        return peaks
+    
+    def get_Amplitude_mean(self):
+        amps = [self.a()[self.maxindice[i]]-self.a()[self.minindice[i]] for i in range(len())]
+        mean = sum(amps)/len(amps)
+        return mean
+
 
 class Measurement:
 
     def __init__(self, data1, data2, Mätintervall, start=0, end=-1):
         self.termoelement1 = Data(data1, Mätintervall, start, end)
         self.termoelement2 = Data(data2, Mätintervall, start, end)
-        print(len(self.termoelement1.get_peaks()), len(self.termoelement2.get_peaks()))
+        #print(len(self.termoelement1.get_mini_peaks()[0]), len(self.termoelement2.get_mini_peaks()[0]))
+        print(len(self.termoelement1.get_max_peaks()), len(self.termoelement2.get_max_peaks()))
         self.length = 0.15
+        
         self.wave_info = {'Par_'+str(i): 
-                          {'t_ij': self.termoelement2.get_peaks()[i][0]-self.termoelement1.get_peaks()[i][0]}
-                            for i in range(len(self.termoelement2.get_peaks()))}
+                          {'t_ij': self.termoelement2.get_max_peaks()[i][0]-self.termoelement1.get_max_peaks()[i][0],}
+                            for i in range(len(self.termoelement2.get_max_peaks()))}
 
     def get_mean(self):
         times = [self.wave_info[par]['t_ij'] for par in self.wave_info]
         return sum(times)/len(times)
+    
+    def get_damp(self):
+        return self.termoelement1.get_Amplitude_mean()/self.termoelement2.get_Amplitude_mean()
+    
+    def get_alpha(self):
+        return np.log(self.get_damp())/self.length
+    
+        
 
 Temperatur1_1 = Data(Temperatur1_1_file, 5, 6000)
 Temperatur1_2 = Data(Temperatur1_2_file, 5, 6000)
