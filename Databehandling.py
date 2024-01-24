@@ -27,7 +27,8 @@ class Data:
         self.datadict['Time'] = []
         self.datadict['Amplitude'] = []
         self.mätintervall = mätintervall
-        self.peaks = []
+        self.peaks = {}
+        self.minpeaks = {}
         with open(data, 'r', encoding='utf-8') as file:
             for row in file:
                 if row[0].isnumeric():
@@ -35,8 +36,8 @@ class Data:
                     self.datadict['Time'].append(int(r[0])*self.mätintervall)
                     self.datadict['Amplitude'].append(float('.'.join(r[1][:-1].split(','))))
         
-        self.minindices = find_peaks(-np.array(self.a()), distance=int(0.9/self.get_frequency()/self.mätintervall))[0]
-        self.maxindices = find_peaks(self.a(), distance=int(0.9/self.get_frequency()/self.mätintervall))
+        self.minindices = find_peaks(-np.array(self.a())+100, distance=int(0.9/self.get_frequency()/self.mätintervall))[0]
+        self.maxindices = find_peaks(self.a(), distance=int(0.9/self.get_frequency()/self.mätintervall))[0]
         return
     
     def t(self):
@@ -61,47 +62,53 @@ class Data:
         return relevant_frequency
     
     def get_max_peaks(self):
-        if self.peaks != []:
+        if self.peaks != {}:
             return self.peaks
-        self.peaks = []
+        self.peaks['T']=[]
+        self.peaks['A']=[]
         for index in self.maxindices:
-            self.peaks.append((self.t()[index] ,self.a()[index]))
+            self.peaks['T'].append(self.t()[index])
+            self.peaks['A'].append(self.a()[index])
         return self.peaks
     
     def get_mini_peaks(self):
-        peaks = []
-        for index in self.minindices:
-            peaks.append((self.t()[index], self.a()[index]))
-        return peaks
+        if self.minpeaks != {}:
+            return self.minpeaks
+        self.minpeaks['T']=[]
+        self.minpeaks['A']=[]
+        for index in self.maxindices:
+            self.minpeaks['T'].append(self.t()[index])
+            self.minpeaks['A'].append(self.a()[index])
+        return self.minpeaks
     
     def get_Amplitude_mean(self):
-        amps = [self.a()[self.maxindice[i]]-self.a()[self.minindice[i]] for i in range(len())]
+        amps = [self.a()[self.maxindices[i]]-self.a()[self.minindices[i]] for i in range(len())]
         mean = sum(amps)/len(amps)
         return mean
 
 
-class Measurement:
-
-    def __init__(self, data1, data2, Mätintervall, start=0, end=-1):
-        self.termoelement1 = Data(data1, Mätintervall, start, end)
-        self.termoelement2 = Data(data2, Mätintervall, start, end)
-        #print(len(self.termoelement1.get_mini_peaks()[0]), len(self.termoelement2.get_mini_peaks()[0]))
-        print(len(self.termoelement1.get_max_peaks()), len(self.termoelement2.get_max_peaks()))
-        self.length = 0.15
-        
-        self.wave_info = {'Par_'+str(i): 
-                          {'t_ij': self.termoelement2.get_max_peaks()[i][0]-self.termoelement1.get_max_peaks()[i][0],}
-                            for i in range(len(self.termoelement2.get_max_peaks()))}
-
-    def get_mean(self):
-        times = [self.wave_info[par]['t_ij'] for par in self.wave_info]
-        return sum(times)/len(times)
-    
-    def get_damp(self):
-        return self.termoelement1.get_Amplitude_mean()/self.termoelement2.get_Amplitude_mean()
-    
-    def get_alpha(self):
-        return np.log(self.get_damp())/self.length
+#class Measurement:
+#
+#    def __init__(self, data1, data2, Mätintervall, start=0, end=-1):
+#        self.termoelement1 = Data(data1, Mätintervall, start, end)
+#        self.termoelement2 = Data(data2, Mätintervall, start, end)
+#        #print(len(self.termoelement1.get_mini_peaks()[0]), len(self.termoelement2.get_mini_peaks()[0]))
+#        #print(len(self.termoelement1.get_max_peaks()), len(self.termoelement2.get_max_peaks()))
+#        self.length = 0.15
+#        
+#        self.wave_info = {'Par_'+str(i): 
+#                          {'t_ij': self.termoelement2.get_max_peaks()[i][0]-self.termoelement1.get_max_peaks()[i][0],}
+#                            for i in range(len(self.termoelement2.get_max_peaks()))}
+#
+#    def get_mean(self):
+#        times = [self.wave_info[par]['t_ij'] for par in self.wave_info]
+#        return sum(times)/len(times)
+#    
+#    def get_damp(self):
+#        return self.termoelement1.get_Amplitude_mean()/self.termoelement2.get_Amplitude_mean()
+#    
+#    def get_alpha(self):
+#        return np.log(self.get_damp())/self.length
     
         
 
@@ -113,15 +120,18 @@ Temperatur3_1 = Data(Temperatur3_1_file, 2, 3000, 56000)
 Temperatur3_2 = Data(Temperatur3_2_file, 2, 3000, 56000)
 Temperaturer = [Temperatur1_1, Temperatur1_2, Temperatur2_1 ,Temperatur2_2, Temperatur3_1, Temperatur3_2]
 
-Measurement1 = Measurement(Temperatur1_1_file, Temperatur1_2_file, 5, 6000)
-Measurement2 = Measurement(Temperatur2_1_file, Temperatur2_2_file, 2, 3750)
-Measurement3 = Measurement(Temperatur3_1_file, Temperatur3_2_file, 2, 4000)
+#Measurement1 = Measurement(Temperatur1_1_file, Temperatur1_2_file, 5, 6000)
+#Measurement2 = Measurement(Temperatur2_1_file, Temperatur2_2_file, 2, 3750)
+#Measurement3 = Measurement(Temperatur3_1_file, Temperatur3_2_file, 2, 4000)
 # print(Measurement1.get_mean())
 # print(Measurement2.get_mean())
 # print(Measurement3.get_mean())
 
-fig, axs = plt.subplots(3, 1, figsize=(20, 10))
-counter=0
-colors = 200*['red', 'green', 'yellow']
-print(Measurement1.get_mean())
-
+#fig, axs = plt.subplots(3, 1, figsize=(20, 10))
+#counter=0
+#colors = 200*['red', 'green', 'yellow']
+#print(Measurement1.get_mean())
+plt.plot(Temperatur2_1.t(), Temperatur2_1.a())
+plt.scatter(Temperatur2_1.get_max_peaks()['T'], Temperatur2_1.get_max_peaks()['A'])
+plt.scatter(Temperatur2_1.get_mini_peaks()['T'], Temperatur2_1.get_mini_peaks()['A'])
+plt.show()
