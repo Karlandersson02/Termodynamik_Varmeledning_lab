@@ -93,22 +93,33 @@ class Measurement:
         self.termoelement1 = Data(data1, Mätintervall, start, end)
         self.termoelement2 = Data(data2, Mätintervall, start, end)
         self.length = 0.1
-#        
-#        self.wave_info = {'Par_'+str(i): 
-#                          {'t_ij': self.termoelement2.get_max_peaks()[i][0]-self.termoelement1.get_max_peaks()[i][0],}
-#                            for i in range(len(self.termoelement2.get_max_peaks()))}
-#
+        self.c = 0.385
+        self.rho = 8.96e6*1e-3
+        self.wave_info = {'Par_'+str(i): 
+                         {'t_ij': self.termoelement2.get_max_peaks()[i][0]-self.termoelement1.get_max_peaks()[i][0],}
+                           for i in range(len(self.termoelement2.get_max_peaks()))}
+
     def get_mean(self):
         times = [self.wave_info[par]['t_ij'] for par in self.wave_info]
         return sum(times)/len(times)
     
+    def get_beta_prime(self):
+        return (np.array(self.termoelement2.get_max_peaks()['T']) - np.array(self.termoelement1.get_max_peaks()['T']))/self.length
+    
     def get_damp(self):
-        ampdiff = self.termoelement1.get_Amplitude_mean()/self.termoelement2.get_Amplitude_mean()
-        return sum(ampdiff)/len(ampdiff)
+        damp = self.termoelement1.get_Amplitude_mean()/self.termoelement2.get_Amplitude_mean()
+        return damp
     
     def get_alpha(self):
         return np.log(self.get_damp())/self.length
     
+    def get_lambda(self):
+        alphas = self.get_alpha()
+        beta_primes = self.get_beta_prime
+        lambdas = []
+        for i in range(alphas):
+            for j in range(beta_primes):
+                
         
 
 Temperatur1_1 = Data(Temperatur1_1_file, 5, 6000)
