@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib
 from scipy.signal import find_peaks
 
 #-----------------Mätning1------------------------------------
@@ -18,7 +19,7 @@ Spänning3_2_file = r'./Mätningar/Ångström_3/Spänning2.csv'
 Temperatur3_1_file = r'./Mätningar/Ångström_3/Temperatur1.csv'
 Temperatur3_2_file = r'./Mätningar/Ångström_3/Temperatur2.csv'
 
-class Data:
+class Termoelement:
 
     def __init__(self, data, mätintervall, start=0, end=-1):
         self.data_start = start//mätintervall
@@ -54,7 +55,6 @@ class Data:
         for i in range(len(Freq)):
             FFT[np.abs(Freq_Amplitudes[i])] = Freq[i]
         sorted_list = sorted(FFT.items(), key = lambda x:-x[0])
-        # return abs(FFT[sorted_list[-2][0]])
         for i in range(100):
             if sorted_list[i][1] > 0.0015:
                 relevant_frequency = sorted_list[i][1]
@@ -82,82 +82,135 @@ class Data:
         return self.minpeaks
     
     def get_Amplitude_list(self):
-        amps = np.array([self.a()[self.maxindices[i]]-self.a()[self.minindices[i]] for i in range(len())])
-        #mean = sum(amps)/len(amps)
+        amps = np.array([self.a()[self.maxindices[i]]-self.a()[self.minindices[i]] for i in range(len(self.minindices))])
         return amps/2
 
 
 class Measurement:
 
     def __init__(self, data1, data2, Mätintervall, start=0, end=-1):
-        self.termoelement1 = Data(data1, Mätintervall, start, end)
-        self.termoelement2 = Data(data2, Mätintervall, start, end)
+        self.termoelement1 = Termoelement(data1, Mätintervall, start, end)
+        self.termoelement2 = Termoelement(data2, Mätintervall, start, end)
         self.length = 0.1
-        self.c = 0.385
+        self.c = 418.68
         self.rho = 8.96e6*1e-3
-        self.wave_info = {'Par_'+str(i): 
-                         {'t_ij': self.termoelement2.get_max_peaks()[i][0]-self.termoelement1.get_max_peaks()[i][0],}
-                           for i in range(len(self.termoelement2.get_max_peaks()))}
 
     def get_mean(self):
         times = [self.wave_info[par]['t_ij'] for par in self.wave_info]
         return sum(times)/len(times)
     
-    def get_beta_prime(self):
+    def get_beta_prime(self): #beta/w
         return (np.array(self.termoelement2.get_max_peaks()['T']) - np.array(self.termoelement1.get_max_peaks()['T']))/self.length
     
     def get_damp(self):
-        damp = self.termoelement1.get_Amplitude_mean()/self.termoelement2.get_Amplitude_mean()
+        damp = self.termoelement1.get_Amplitude_list()/self.termoelement2.get_Amplitude_list()
         return damp
     
     def get_alpha(self):
         return np.log(self.get_damp())/self.length
     
-    def get_lambda(self):
-        alphas = self.get_alpha()
-        beta_primes = self.get_beta_prime
-        lambdas = []
-        for i in range(alphas):
-            for j in range(beta_primes):
-                
+    def get_conductivity(self):
+        if not hasattr(self, 'lambdas'):
+            alphas = self.get_alpha()
+            beta_primes = self.get_beta_prime()
+            self.lambdas = []
+            for alpha in alphas:
+                for beta_prime in beta_primes:
+                    self.lambdas.append(self.c*self.rho/2/alpha/beta_prime)
+        return self.lambdas
+    
+    def get_mean_conductivity(self):
+        return sum(self.get_conductivity())/len(self.get_conductivity())
+
+    def get_standard_error(self):
+        lambdas = self.get_conductivity()
+        lambda_mean = self.get_mean_conductivity()
+        n = len(lambdas)
+        return np.sqrt(sum((lambdas-lambda_mean)**2))/n
+    
+    def get_peak_range(self, Antal_peaks=20, guess = 'asdf'):
         
+        peaks1 = self.termoelement1.get_max_peaks()
+        peaks2 = self.termoelement2.get_max_peaks()
+        if guess == 'asdf':
+            guess = (peaks1['T'][-1]-peaks1['T'][0])//2
+        
+        for i in range(1000):
+            if guess+i in peaks1['T']:
+                start_tid1 = guess+i
+                start_index1 = self.termoelement1.t().index(start_tid1)
+                slut_tid = peaks1['T'][peaks1['T'].index(start_tid1)+Antal_peaks]
+                slut_index1 = self.termoelement1.t().index(slut_tid)
+                break
+        
+        return (start_index1, slut_index1) 
 
-Temperatur1_1 = Data(Temperatur1_1_file, 5, 6000)
-Temperatur1_2 = Data(Temperatur1_2_file, 5, 6000)
-Temperatur2_1 = Data(Temperatur2_1_file, 2, 3600)
-Temperatur2_2 = Data(Temperatur2_2_file, 2, 3600)
-Temperatur3_1 = Data(Temperatur3_1_file, 2, 2750, 56000)
-Temperatur3_2 = Data(Temperatur3_2_file, 2, 2750, 56000)
-Temperaturer = [Temperatur1_1, Temperatur1_2, Temperatur2_1 ,Temperatur2_2, Temperatur3_1, Temperatur3_2]
+class Measurements:
+    def __init__(self):
+        self.Measurement1 = Measurement(Temperatur1_1_file, Temperatur1_2_file, 5, 6000)
+        self.Measurement2 = Measurement(Temperatur2_1_file, Temperatur2_2_file, 2, 3750)
+        self.Measurement3 = Measurement(Temperatur3_1_file, Temperatur3_2_file, 2, 4000)
 
-#Measurement1 = Measurement(Temperatur1_1_file, Temperatur1_2_file, 5, 6000)
-#Measurement2 = Measurement(Temperatur2_1_file, Temperatur2_2_file, 2, 3750)
-#Measurement3 = Measurement(Temperatur3_1_file, Temperatur3_2_file, 2, 4000)
-# print(Measurement1.get_mean())
-# print(Measurement2.get_mean())
-# print(Measurement3.get_mean())
-print((len(Temperatur1_1.get_max_peaks()['T']), len(Temperatur1_1.get_mini_peaks()['T'])))
-print((len(Temperatur1_2.get_max_peaks()['T']), len(Temperatur1_2.get_mini_peaks()['T'])))
-print((len(Temperatur2_2.get_max_peaks()['T']), len(Temperatur2_2.get_mini_peaks()['T'])))
-print((len(Temperatur2_1.get_max_peaks()['T']), len(Temperatur2_1.get_mini_peaks()['T'])))
-print((len(Temperatur3_1.get_max_peaks()['T']), len(Temperatur3_1.get_mini_peaks()['T'])))
-print((len(Temperatur3_2.get_max_peaks()['T']), len(Temperatur3_2.get_mini_peaks()['T'])))
-fig, axs = plt.subplots(3, 1, figsize=(20, 10))
-counter=0
-colors = 200*['red', 'green', 'yellow']
-#print(Measurement1.get_mean())
-axs[0].plot(Temperatur1_1.t(), Temperatur1_1.a())
-axs[0].plot(Temperatur1_2.t(), Temperatur1_2.a())
-axs[0].scatter(Temperatur1_1.get_max_peaks()['T'], Temperatur1_1.get_max_peaks()['A'])
-axs[0].scatter(Temperatur1_2.get_max_peaks()['T'], Temperatur1_2.get_max_peaks()['A'])
+    def get_info(self):
+        Conductivity1 = self.Measurement1.get_mean_conductivity()
+        Conductivity2 = self.Measurement2.get_mean_conductivity()
+        Conductivity3 = self.Measurement3.get_mean_conductivity()
 
-axs[1].plot(Temperatur2_1.t(), Temperatur2_1.a())
-axs[1].plot(Temperatur2_2.t(), Temperatur2_2.a())
-axs[1].scatter(Temperatur2_1.get_max_peaks()['T'], Temperatur2_1.get_max_peaks()['A'])
-axs[1].scatter(Temperatur2_2.get_max_peaks()['T'], Temperatur2_2.get_max_peaks()['A'])
+        StandardError1 = self.Measurement1.get_standard_error()
+        StandardError2 = self.Measurement2.get_standard_error()
+        StandardError3 = self.Measurement3.get_standard_error()
 
-axs[2].plot(Temperatur3_1.t(), Temperatur3_1.a())
-axs[2].plot(Temperatur3_2.t(), Temperatur3_2.a())
-axs[2].scatter(Temperatur3_1.get_max_peaks()['T'], Temperatur3_1.get_max_peaks()['A'])
-axs[2].scatter(Temperatur3_2.get_max_peaks()['T'], Temperatur3_2.get_max_peaks()['A'])
-plt.show()
+        print('----------------------------------------------------------------')
+        print(f'Measurement 1: Conductivity = {Conductivity1:.2f} with Standard Error = {StandardError1:.2f}.')
+        print(f'Measurement 2: Conductivity = {Conductivity2:.2f} with Standard Error = {StandardError2:.2f}.')
+        print(f'Measurement 3: Conductivity = {Conductivity3:.2f} with Standard Error = {StandardError3:.2f}.')
+        print('----------------------------------------------------------------')
+
+        return
+    
+    def plot_data(self, Selection = [1, 2, 3]):
+
+        Data = []
+        Mätningar = []
+        Peak_range = []
+        if 1 in Selection:
+            Data.append(Measurements().Measurement1)
+            Mätningar.append('(2V, 5min)')
+            Peak_range.append(Measurements().Measurement1.get_peak_range(Antal_peaks=2))
+        if 2 in Selection:
+            Data.append(Measurements().Measurement2)
+            Mätningar.append('(2V, 3min)')
+            Peak_range.append(Measurements().Measurement2.get_peak_range(Antal_peaks=2))
+        if 3 in Selection:
+            Data.append(Measurements().Measurement3)
+            Mätningar.append('(2V, 2min)')
+            Peak_range.append(Measurements().Measurement3.get_peak_range(Antal_peaks=2))
+        
+        matplotlib.rcParams.update({'font.size': 16})
+        fig, axs = plt.subplots(len(Selection), 1, figsize=(20,10))
+        plt.subplots_adjust(hspace=0.7)
+        for i in range(len(Data)):
+            axs[i].set_title(f'Värmevåg {Mätningar[i]}')
+            axs[i].plot(Data[i].termoelement1.t(), Data[i].termoelement1.a(), color = '#0d47a1', label='Termoelement 1')
+            axs[i].plot(Data[i].termoelement2.t(), Data[i].termoelement2.a(), color = '#e65100', label='Termoelement 2')
+            axs[i].set_ylabel(r'Spänning $[V]$')
+            axs[i].set_xlabel(r'Tid $[s]$')
+            axs[i].grid()
+            # axs[i][0].legend(loc='upper left')
+        plt.show()
+
+        fig, axs = plt.subplots(len(Selection), 2, figsize=(20,10))
+        plt.subplots_adjust(hspace=0.7)
+        for i in range(len(Data)):
+            axs[i][0].plot(Data[i].termoelement1.t()[Peak_range[i][0]:Peak_range[i][1]], Data[i].termoelement1.a()[Peak_range[i][0]:Peak_range[i][1]], color='#0d47a1')
+            axs[i][1].plot(Data[i].termoelement2.t()[Peak_range[i][0]:Peak_range[i][1]], Data[i].termoelement2.a()[Peak_range[i][0]:Peak_range[i][1]], color='#e65100')
+            axs[i][0].grid()
+            axs[i][1].grid()
+            axs[i][0].set_title(f'Termoelement 1 närbild {Mätningar[i]}')
+            axs[i][1].set_title(f'Termoelement 2 närbild {Mätningar[i]}')
+        plt.show()
+        return
+
+measurements = Measurements()
+measurements.get_info()
+measurements.plot_data()
