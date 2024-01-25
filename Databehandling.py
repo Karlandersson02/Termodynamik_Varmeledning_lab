@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib
 from scipy.signal import find_peaks
+import Spänningsomvandlare
 
 #-----------------Mätning1------------------------------------
 Spänning1_1_file = r'./Mätningar/Ångström_1/Spänning1.csv'
@@ -212,5 +213,11 @@ class Measurements:
         return
 
 measurements = Measurements()
-measurements.get_info()
-measurements.plot_data()
+# measurements.get_info()
+# measurements.plot_data()
+
+from Spänningsomvandlare import Thermocouple
+
+Temperatur = Thermocouple.mv_to_typek(min(measurements.Measurement1.termoelement2.a()))
+print(min(measurements.Measurement1.termoelement2.a()))
+print(Temperatur)
