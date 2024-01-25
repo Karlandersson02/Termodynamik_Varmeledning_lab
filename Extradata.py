@@ -1,7 +1,7 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
-
+import matplotlib
 Tjock_kall_file = r'./Mätningar/Tjock_koppar/Tjockkoppar_kallt_till_luft.csv'
 Tjock_varm_file = r'./Mätningar/Tjock_koppar/Tjockkoppar_varmt_till_luft_1.csv'
 Tunn_kall_file = r'./Mätningar/Tunn_koppar/Koppar_kallt_till_luft_1.csv'
@@ -83,17 +83,32 @@ Tunn_varm = EData(Tunn_varm_file)
 Tjock = Comparison(Tjock_varm_file, Tjock_kall_file)
 Tunn = Comparison(Tunn_varm_file, Tunn_kall_file)
 
-print(len(Tjock.v_kall())) #21 -22.418
+print(Tjock.v_kall()[-1]) #21 -22.418
 print(Tjock.v_varm()[-1]) #21 +17.134
 
-print(len(Tunn.v_kall()))
+print(Tunn.v_kall()[-1])
 print(Tunn.v_varm()[-1])
+matplotlib.rcParams.update({'font.size': 16})
 fig, axs = plt.subplots(2, 1, figsize=(20, 10))
-
-axs[0].scatter(Tjock.t_varm(), Tjock.v_varm(), s=2)
-axs[0].scatter(Tjock.t_kall(), Tjock.v_kall(), s=2)
+plt.subplots_adjust(hspace=0.5)
+axs[0].scatter(Tjock.t_varm(), Tjock.v_varm(), s=2, color = 'red', label = 'Varma')
+axs[0].scatter(Tjock.t_kall(), Tjock.v_kall(), s=2, color = 'blue', label = 'Kalla')
+axs[0].scatter(Tjock.t_varm()[-1], Tjock.v_varm()[-1], s=50, color = 'purple', label = f'Spänning = {Tjock.v_varm()[-1]:.3e} V')
+axs[0].scatter(Tjock.t_kall()[-1], Tjock.v_kall()[-1], s=50, color = 'black', label = f'Spänning = {Tjock.v_kall()[-1]:.3e} V')
 axs[0].grid()
-axs[1].scatter(Tunn.t_varm(), Tunn.v_varm(), s=2)
-axs[1].scatter(Tunn.t_kall(), Tunn.v_kall(), s=2)
+axs[0].set_xlabel('Tid [s]')
+axs[0].set_ylabel('Spänning [V]')
+axs[0].set_title('Tjock')
+axs[0].legend(fontsize='12')
+
+axs[1].scatter(Tunn.t_varm(), Tunn.v_varm(), s=2, color = 'red', label = 'Varma')
+axs[1].scatter(Tunn.t_kall(), Tunn.v_kall(), s=2, color = 'blue', label = 'Kalla')
+axs[1].scatter(Tunn.t_varm()[-1], Tunn.v_varm()[-1], s=50, color = 'purple', label = f'Spänning = {Tunn.v_varm()[-1]:.3e} V')
+axs[1].scatter(Tunn.t_kall()[-1], Tunn.v_kall()[-1], s=50, color = 'black', label = f'Spänning = {Tunn.v_kall()[-1]:.3e} V')
 axs[1].grid()
+axs[1].set_xlabel('Tid [s]')
+axs[1].set_ylabel('Spänning [V]')
+axs[1].set_title('Tunn')
+axs[1].legend(fontsize='12')
+
 plt.show()
