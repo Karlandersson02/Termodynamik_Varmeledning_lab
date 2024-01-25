@@ -1,8 +1,11 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib
+from matplotlib.ticker import FormatStrFormatter
 from scipy.signal import find_peaks
-import Spänningsomvandlare
+from Spänningsomvandlare import Thermocouple
+to_temp = Thermocouple.mv_to_typek
+to_volt = Thermocouple.typek_to_mv
 
 #-----------------Mätning1------------------------------------
 Spänning1_1_file = r'./Mätningar/Ångström_1/Spänning1.csv'
@@ -31,13 +34,14 @@ class Termoelement:
         self.mätintervall = mätintervall
         self.peaks = {}
         self.minpeaks = {}
+        self.ref_temp = 21
+        self.Temperature = []
         with open(data, 'r', encoding='utf-8') as file:
             for row in file:
                 if row[0].isnumeric():
                     r = row.split(';')
                     self.datadict['Time'].append(int(r[0])*self.mätintervall)
                     self.datadict['Amplitude'].append(float('.'.join(r[1][:-1].split(','))))
-        
         self.minindices = find_peaks(-np.array(self.a()), distance=int(0.9/self.get_frequency()/self.mätintervall))[0]
         self.maxindices = find_peaks(self.a(), distance=int(0.9/self.get_frequency()/self.mätintervall))[0]
         return
@@ -46,7 +50,10 @@ class Termoelement:
         return self.datadict['Time'][self.data_start:self.data_end]
     
     def a(self):
-        return self.datadict['Amplitude'][self.data_start:self.data_end]
+        if self.Temperature==[]:
+            ref_volt = to_volt(self.ref_temp)
+            self.Temperature =[to_temp(volt*1e3+ref_volt) for volt in self.datadict['Amplitude'][self.data_start:self.data_end]]
+        return self.Temperature
     
     def get_frequency(self):
         x, y = np.array(self.t()), np.array(self.a())
@@ -148,9 +155,9 @@ class Measurement:
 
 class Measurements:
     def __init__(self):
-        self.Measurement1 = Measurement(Temperatur1_1_file, Temperatur1_2_file, 5, 6000)
-        self.Measurement2 = Measurement(Temperatur2_1_file, Temperatur2_2_file, 2, 3750)
-        self.Measurement3 = Measurement(Temperatur3_1_file, Temperatur3_2_file, 2, 4000)
+        self.Measurement1 = Measurement(Spänning1_1_file, Spänning1_2_file, 5, 6000)
+        self.Measurement2 = Measurement(Spänning2_1_file, Spänning2_2_file, 2, 3750)
+        self.Measurement3 = Measurement(Spänning3_1_file, Spänning3_2_file, 2, 4000, -9350)
 
     def get_info(self):
         Conductivity1 = self.Measurement1.get_mean_conductivity()
@@ -169,7 +176,7 @@ class Measurements:
 
         return
     
-    def plot_data(self, Selection = [1, 2, 3]):
+    def plot_data(self, Selection = [1, 2, 3], Save=False):
 
         Data = []
         Mätningar = []
@@ -192,32 +199,48 @@ class Measurements:
         plt.subplots_adjust(hspace=0.7)
         for i in range(len(Data)):
             axs[i].set_title(f'Värmevåg {Mätningar[i]}')
-            axs[i].plot(Data[i].termoelement1.t(), Data[i].termoelement1.a(), color = '#0d47a1', label='Termoelement 1')
-            axs[i].plot(Data[i].termoelement2.t(), Data[i].termoelement2.a(), color = '#e65100', label='Termoelement 2')
-            axs[i].set_ylabel(r'Spänning $[V]$')
+            axs[i].plot(Data[i].termoelement1.t(), Data[i].termoelement1.a(), color = 'black', label='Termoelement 1')
+            axs[i].plot(Data[i].termoelement2.t(), Data[i].termoelement2.a(), color = 'red', label='Termoelement 2')
+            axs[i].set_ylabel(r'Temperatur [$^o$C]')
             axs[i].set_xlabel(r'Tid $[s]$')
+            axs[i].yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+            axs[i].xaxis.set_tick_params(labelsize=12)
+            axs[i].yaxis.set_tick_params(labelsize=12)
             axs[i].grid()
-            # axs[i][0].legend(loc='upper left')
+            axs[i].legend(loc='upper left', fontsize=12)
+        if Save==True:
+            plt.savefig(r'.\Bilder\Experiment_all_data.pdf')
         plt.show()
 
         fig, axs = plt.subplots(len(Selection), 2, figsize=(20,10))
-        plt.subplots_adjust(hspace=0.7)
+        plt.subplots_adjust(hspace=0.8)
+        # matplotlib.axes.Axes.tick_params({'labelsize': 12})
         for i in range(len(Data)):
-            axs[i][0].plot(Data[i].termoelement1.t()[Peak_range[i][0]:Peak_range[i][1]], Data[i].termoelement1.a()[Peak_range[i][0]:Peak_range[i][1]], color='#0d47a1')
-            axs[i][1].plot(Data[i].termoelement2.t()[Peak_range[i][0]:Peak_range[i][1]], Data[i].termoelement2.a()[Peak_range[i][0]:Peak_range[i][1]], color='#e65100')
+            axs[i][0].plot(Data[i].termoelement1.t()[Peak_range[i][0]:Peak_range[i][1]], Data[i].termoelement1.a()[Peak_range[i][0]:Peak_range[i][1]], color='black')
+            axs[i][1].plot(Data[i].termoelement2.t()[Peak_range[i][0]:Peak_range[i][1]], Data[i].termoelement2.a()[Peak_range[i][0]:Peak_range[i][1]], color='red')
             axs[i][0].grid()
             axs[i][1].grid()
-            axs[i][0].set_title(f'Termoelement 1 närbild {Mätningar[i]}')
-            axs[i][1].set_title(f'Termoelement 2 närbild {Mätningar[i]}')
+            if i == 0:
+                 axs[i][0].set_title(f'Termoelement 1 närbilder \n {Mätningar[i]}')
+                 axs[i][1].set_title(f'Termoelement 2 närbilder \n {Mätningar[i]}')
+            else:
+                axs[i][0].set_title(f'{Mätningar[i]}')
+                axs[i][1].set_title(f'{Mätningar[i]}')
+            axs[i][0].xaxis.set_tick_params(rotation=27.5, labelsize=12)
+            axs[i][1].xaxis.set_tick_params(rotation=27.5, labelsize=12)
+            axs[i][0].yaxis.set_tick_params(labelsize=12)
+            axs[i][1].yaxis.set_tick_params(labelsize=12)
+            axs[i][0].set_xlabel(r'Tid [s]')
+            axs[i][0].set_ylabel(r'Temperatur [$^o$C]')
+            axs[i][1].set_xlabel(r'Tid $[s]$')
+            axs[i][1].set_ylabel(r'Temperatur [$^o$C]')
+            axs[i][0].yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+            axs[i][1].yaxis.set_major_formatter(FormatStrFormatter('%.1f'))
+        if Save==True:
+            plt.savefig(r'.\Bilder\Experiment_utvald_data.pdf')
         plt.show()
         return
 
 measurements = Measurements()
-# measurements.get_info()
-# measurements.plot_data()
-
-from Spänningsomvandlare import Thermocouple
-
-Temperatur = Thermocouple.mv_to_typek(min(measurements.Measurement1.termoelement2.a()))
-print(min(measurements.Measurement1.termoelement2.a()))
-print(Temperatur)
+measurements.get_info()
+measurements.plot_data(Save=True)
