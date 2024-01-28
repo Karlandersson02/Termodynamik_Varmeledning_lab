@@ -136,6 +136,9 @@ class Measurement:
         n = len(lambdas)
         return np.sqrt(sum((lambdas-lambda_mean)**2))/n
     
+    def get_number_of_samples(self):
+        return len(self.termoelement1.get_max_peaks()['T'])
+    
     def get_peak_range(self, Antal_peaks=20, guess = 'asdf'):
         
         peaks1 = self.termoelement1.get_max_peaks()
@@ -168,10 +171,14 @@ class Measurements:
         StandardError2 = self.Measurement2.get_standard_error()
         StandardError3 = self.Measurement3.get_standard_error()
 
+        Number_of_samples1 = self.Measurement1.get_number_of_samples()
+        Number_of_samples2 = self.Measurement2.get_number_of_samples()
+        Number_of_samples3 = self.Measurement3.get_number_of_samples()
+
         print('----------------------------------------------------------------')
-        print(f'Measurement 1: Conductivity = {Conductivity1:.2f} with Standard Error = {StandardError1:.2f}.')
-        print(f'Measurement 2: Conductivity = {Conductivity2:.2f} with Standard Error = {StandardError2:.2f}.')
-        print(f'Measurement 3: Conductivity = {Conductivity3:.2f} with Standard Error = {StandardError3:.2f}.')
+        print(f'Measurement 1: Conductivity = {Conductivity1:.2f} with Standard Error = {StandardError1:.2f} and Number of Samples = {Number_of_samples1}')
+        print(f'Measurement 2: Conductivity = {Conductivity2:.2f} with Standard Error = {StandardError2:.2f} and Number of Samples = {Number_of_samples2}.')
+        print(f'Measurement 3: Conductivity = {Conductivity3:.2f} with Standard Error = {StandardError3:.2f} and Number of Samples = {Number_of_samples3}.')
         print('----------------------------------------------------------------')
 
         return
@@ -243,4 +250,4 @@ class Measurements:
 
 measurements = Measurements()
 measurements.get_info()
-measurements.plot_data(Save=True)
+# measurements.plot_data(Save=False)
