@@ -92,7 +92,7 @@ class Termoelement:
     def get_Amplitude_list(self):
         amps = np.array([self.a()[self.maxindices[i]]-self.a()[self.minindices[i]] for i in range(len(self.minindices))])
         return amps/2
-
+    
 
 class Measurement:
 
